@@ -23,15 +23,44 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		7AD10EB92D8129CD005A56D9 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		7A3D653A2D794E2E0015C27B /* AwkTalk2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AwkTalk2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A3D654A2D794E2F0015C27B /* AwkTalk2Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AwkTalk2Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A3D65542D794E2F0015C27B /* AwkTalk2UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AwkTalk2UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		7A9537452D85312600F1158F /* Exceptions for "AwkTalk2" folder in "Embed Frameworks" phase from "AwkTalk2" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			attributesByRelativePath = {
+				MicrosoftCognitiveServicesSpeech.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
+			};
+			buildPhase = 7AD10EB92D8129CD005A56D9 /* Embed Frameworks */;
+			membershipExceptions = (
+				MicrosoftCognitiveServicesSpeech.xcframework,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7A3D653C2D794E2E0015C27B /* AwkTalk2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7A9537452D85312600F1158F /* Exceptions for "AwkTalk2" folder in "Embed Frameworks" phase from "AwkTalk2" target */,
+			);
 			path = AwkTalk2;
 			sourceTree = "<group>";
 		};
@@ -102,6 +131,7 @@
 				7A3D65362D794E2E0015C27B /* Sources */,
 				7A3D65372D794E2E0015C27B /* Frameworks */,
 				7A3D65382D794E2E0015C27B /* Resources */,
+				7AD10EB92D8129CD005A56D9 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -111,8 +141,6 @@
 				7A3D653C2D794E2E0015C27B /* AwkTalk2 */,
 			);
 			name = AwkTalk2;
-			packageProductDependencies = (
-			);
 			productName = AwkTalk2;
 			productReference = 7A3D653A2D794E2E0015C27B /* AwkTalk2.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +162,6 @@
 				7A3D654D2D794E2F0015C27B /* AwkTalk2Tests */,
 			);
 			name = AwkTalk2Tests;
-			packageProductDependencies = (
-			);
 			productName = AwkTalk2Tests;
 			productReference = 7A3D654A2D794E2F0015C27B /* AwkTalk2Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +183,6 @@
 				7A3D65572D794E2F0015C27B /* AwkTalk2UITests */,
 			);
 			name = AwkTalk2UITests;
-			packageProductDependencies = (
-			);
 			productName = AwkTalk2UITests;
 			productReference = 7A3D65542D794E2F0015C27B /* AwkTalk2UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -399,6 +423,7 @@
 				DEVELOPMENT_TEAM = 6CVHWH9A2F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +453,7 @@
 				DEVELOPMENT_TEAM = 6CVHWH9A2F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -443,6 +469,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = NO;
 			};
 			name = Release;
 		};
