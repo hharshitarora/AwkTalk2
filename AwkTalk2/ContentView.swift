@@ -11,118 +11,76 @@ struct ContentView: View {
     @EnvironmentObject var audioManager: AudioManager
     @State private var showingSettings = false
     @State private var transcriptionScrollId = UUID()
+    @State private var showingError = false
+    @State private var scrollToLatest = UUID() // ID for scrolling to latest message
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color(uiColor: .systemBackground)
-                    .ignoresSafeArea()
+        NavigationView {
+            VStack(spacing: 0) {
+                // Fixed suggestion area at the top
+                TopSuggestionView()
+                    .environmentObject(audioManager)
                 
-                conversationView
-                
-                if let error = audioManager.error {
-                    ErrorView(error: error)
+                // Main content
+                ZStack {
+                    VStack {
+                        // Conversation Transcript View with auto-scrolling
+                        ScrollViewReader { scrollProxy in
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(audioManager.conversationLog) { entry in
+                                        ConversationEntryView(entry: entry)
+                                            .id(entry.id) // Use entry's ID for identification
+                                    }
+                                    
+                                    // Invisible view at the bottom for scrolling
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .id(scrollToLatest)
+                                }
+                                .padding()
+                            }
+                            .onChange(of: audioManager.conversationLog) { _ in
+                                // When conversation changes, scroll to bottom with animation
+                                withAnimation {
+                                    scrollProxy.scrollTo(scrollToLatest, anchor: .bottom)
+                                }
+                            }
+                            .onAppear {
+                                // Scroll to bottom when view appears
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    withAnimation {
+                                        scrollProxy.scrollTo(scrollToLatest, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Recording Controls
+                        RecordingControlsView()
+                            .environmentObject(audioManager)
+                    }
                 }
             }
             .navigationTitle("AwkTalk")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showingSettings = true
-                    }) {
-                        Image(systemName: "gear")
-                            .font(.system(size: 17))
-                            .frame(width: 44, height: 44) // Apple's minimum touch target size
-                    }
-                }
-                
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
-                        // Clear conversation
-                        withAnimation {
-                            audioManager.clearConversation()
-                        }
+                        audioManager.clearConversation()
                     }) {
                         Image(systemName: "trash")
-                            .font(.system(size: 17))
-                            .frame(width: 44, height: 44) // Apple's minimum touch target size
+                            .frame(width: 44, height: 44)
                     }
                 }
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
             }
         }
-    }
-    
-    private var conversationView: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { scrollView in
-                ScrollView {
-                    LazyVStack(spacing: 20) { // Increased spacing for better readability
-                        ForEach(audioManager.conversationLog) { entry in
-                            MessageBubble(entry: entry)
-                                .id(entry.id)
-                        }
-                        
-                        // Invisible spacer view that helps with scrolling
-                        Color.clear
-                            .frame(height: 1)
-                            .id("bottomScrollAnchor")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 20)
-                    .padding(.bottom, 16)
-                }
-                .onChange(of: audioManager.conversationLog.count) { _ in
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        scrollView.scrollTo("bottomScrollAnchor", anchor: .bottom)
-                    }
+        .sheet(isPresented: $showingError) {
+            if let error = audioManager.error {
+                ErrorView(error: error) {
+                    showingError = false
+                    audioManager.error = nil
                 }
             }
-            
-            Spacer()
-            
-            // Compact transcription and recording controls
-            VStack(spacing: 12) { // Increased spacing
-                if !audioManager.transcribedText.isEmpty {
-                    LiveTranscriptionView(text: audioManager.transcribedText)
-                }
-                
-                HStack {
-                    Spacer() // Center the button
-                    
-                    Button(action: {
-                        if audioManager.isRecording {
-                            audioManager.stopRecording()
-                        } else {
-                            audioManager.startRecording()
-                        }
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(audioManager.isRecording ? Color.red : Color.accentColor)
-                                .frame(width: 64, height: 64) // Increased to 64pt for better tappability
-                                .shadow(color: audioManager.isRecording ? Color.red.opacity(0.2) : Color.accentColor.opacity(0.2), 
-                                        radius: 6, x: 0, y: 3)
-                            
-                            Image(systemName: audioManager.isRecording ? "stop.fill" : "mic.fill")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .buttonStyle(ScaleButtonStyle())
-                    .padding(.vertical, 16) // Increased padding for better touch area
-                    
-                    Spacer() // Center the button
-                }
-            }
-            .padding(.horizontal)
-            .background(
-                Color(uiColor: .systemGray6)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: -3)
-            )
         }
     }
 }

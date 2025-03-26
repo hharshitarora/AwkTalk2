@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7A9537522D91FEF100F1158F /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 7A9537512D91FEF100F1158F /* MLXLLM */; };
+		7A9537542D91FEF100F1158F /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7A9537532D91FEF100F1158F /* MLXLMCommon */; };
+		7A9537562D92066700F1158F /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 7A9537552D92066700F1158F /* MLXLLM */; };
+		7A9537582D92066700F1158F /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7A9537572D92066700F1158F /* MLXLMCommon */; };
+		7A95375A2D9206E300F1158F /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 7A9537592D9206E300F1158F /* MLXLLM */; };
+		7A95375C2D9206E300F1158F /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7A95375B2D9206E300F1158F /* MLXLMCommon */; };
+		7A95375E2D9206E300F1158F /* StableDiffusion in Frameworks */ = {isa = PBXBuildFile; productRef = 7A95375D2D9206E300F1158F /* StableDiffusion */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7A3D654B2D794E2F0015C27B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -81,6 +91,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A95375A2D9206E300F1158F /* MLXLLM in Frameworks */,
+				7A95375E2D9206E300F1158F /* StableDiffusion in Frameworks */,
+				7A9537582D92066700F1158F /* MLXLMCommon in Frameworks */,
+				7A9537562D92066700F1158F /* MLXLLM in Frameworks */,
+				7A9537522D91FEF100F1158F /* MLXLLM in Frameworks */,
+				7A9537542D91FEF100F1158F /* MLXLMCommon in Frameworks */,
+				7A95375C2D9206E300F1158F /* MLXLMCommon in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +236,9 @@
 			);
 			mainGroup = 7A3D65312D794E2E0015C27B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A3D653B2D794E2E0015C27B /* Products */;
 			projectDirPath = "";
@@ -585,6 +605,55 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-examples";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.21.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7A9537512D91FEF100F1158F /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLLM;
+		};
+		7A9537532D91FEF100F1158F /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLMCommon;
+		};
+		7A9537552D92066700F1158F /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLLM;
+		};
+		7A9537572D92066700F1158F /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLMCommon;
+		};
+		7A9537592D9206E300F1158F /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLLM;
+		};
+		7A95375B2D9206E300F1158F /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLMCommon;
+		};
+		7A95375D2D9206E300F1158F /* StableDiffusion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A9537502D91FEF100F1158F /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = StableDiffusion;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7A3D65322D794E2E0015C27B /* Project object */;
 }

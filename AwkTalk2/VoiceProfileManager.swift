@@ -2,17 +2,9 @@ import Foundation
 import AVFoundation
 import SoundAnalysis
 
-enum Speaker: String, Identifiable {
-    case user = "You"
-    case other = "Other Person"
-    case unknown = "Unknown"
-    
-    var id: String { self.rawValue }
-}
-
 class VoiceProfileManager: ObservableObject {
     @Published var isProfileCreated = false
-    @Published var currentSpeaker: Speaker = .unknown
+    @Published var currentSpeaker: ConversationEntry.Speaker = .unknown
     
     private var userVoiceFeatures: [Float]?
     private var analyzer: SNAudioStreamAnalyzer?
@@ -45,7 +37,7 @@ class VoiceProfileManager: ObservableObject {
             let similarity = self.calculateSimilarity(between: userFeatures, and: currentFeatures)
             
             // If similarity is above threshold, it's the user
-            let speaker = similarity > 0.7 ? Speaker.user : Speaker.other
+            let speaker = similarity > 0.7 ? ConversationEntry.Speaker.user : ConversationEntry.Speaker.other
             
             DispatchQueue.main.async {
                 self.currentSpeaker = speaker
