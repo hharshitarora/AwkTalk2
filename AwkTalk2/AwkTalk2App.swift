@@ -13,8 +13,16 @@ struct AwkTalk2App: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ConversationContextView()
                 .environmentObject(audioManager)
+                .onAppear {
+                    // Optionally pre-load some components after a delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        // Start loading the model in the background after UI is shown
+                        // Use a public method instead of accessing private property
+                        audioManager.preloadModel()
+                    }
+                }
         }
     }
 }

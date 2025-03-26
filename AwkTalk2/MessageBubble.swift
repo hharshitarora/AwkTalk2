@@ -42,9 +42,18 @@ struct  MessageBubble: View {
 }
 
 #Preview {
-    VStack {
-        MessageBubble(entry: ConversationEntry(text: "Hello, how are you?", speaker: .user, timestamp: Date()))
-        MessageBubble(entry: ConversationEntry(text: "I'm doing well, thanks for asking!", speaker: .other, timestamp: Date()))
+    Group {
+        MessageBubble(entry: ConversationEntry(
+            timestamp: Date(),
+            text: "Hello, this is a test message.",
+            speaker: .user
+        ))
+        
+        MessageBubble(entry: ConversationEntry(
+            timestamp: Date(),
+            text: "This is a reply message.",
+            speaker: .other
+        ))
     }
-    .padding()
+    .previewLayout(.sizeThatFits)
 } 

@@ -1,31 +1,7 @@
 import Foundation
 import AVFoundation
 import MicrosoftCognitiveServicesSpeech
-
-enum AzureError: Error, Identifiable {
-    case configurationFailed
-    case recognitionFailed(String)
-    case noSubscriptionKey
-    
-    var id: String {
-        switch self {
-        case .configurationFailed: return "configurationFailed"
-        case .recognitionFailed: return "recognitionFailed"
-        case .noSubscriptionKey: return "noSubscriptionKey"
-        }
-    }
-    
-    var message: String {
-        switch self {
-        case .configurationFailed:
-            return "Failed to configure Azure Speech Service"
-        case .recognitionFailed(let message):
-            return "Recognition failed: \(message)"
-        case .noSubscriptionKey:
-            return "Azure Speech Service subscription key is missing"
-        }
-    }
-}
+import Combine
 
 class AzureSpeechManager: ObservableObject {
     @Published var isRecording = false
@@ -33,8 +9,8 @@ class AzureSpeechManager: ObservableObject {
     @Published var conversationLog: [ConversationEntry] = []
     @Published var error: AzureError?
     
-    // Azure Speech Service credentials
-    private let subscriptionKey = "3vGIugLP8MhpI2LCewNbHk6xqulW1YH60vh4MGDMC1qHgMqZKNo5JQQJ99BCAC1i4TkXJ3w3AAAYACOGf3CI"
+    // Azure Speech Service credentials - use directly without encryption
+    private let subscriptionKey = "3vGIugLP8MhpI2LCewNbHk6xqulW1YH60vh4MGDMC1qHgMqZKNo5JQQJ99BCAC1i4TkXJ3w3AAAYACOGf3CI" // Replace with your actual key
     private let region = "centralus"
     
     // Speech recognition
@@ -43,48 +19,63 @@ class AzureSpeechManager: ObservableObject {
     private var transcriber: SPXConversationTranscriber?
     
     // Speaker mapping
-    private var speakerMap: [String: Speaker] = [:]
+    private var speakerMap: [String: ConversationEntry.Speaker] = [:]
     
     // Debug flag to print detailed information
-    private let debug = true
+    private let debug = true  // Set to true for debugging
+    
+    // Lazy initialization
+    private var isConfigured = false
     
     init() {
-        setupSpeechConfig()
+        // Don't set up speech config in init
     }
     
-    private func setupSpeechConfig() {
+    func setupSpeechConfig() {
+        guard !isConfigured else { return }
+        
         do {
-            // Create speech configuration with subscription key and region
+            // Use the subscription key directly
             speechConfig = try SPXSpeechConfiguration(subscription: subscriptionKey, region: region)
             
-            // Set recognition language
+            // Set language
             speechConfig?.speechRecognitionLanguage = "en-US"
             
-            // Enable diarization through direct property setting
-            speechConfig?.setPropertyTo("true", byName: "SPEECH-EnableDiarization")
-            speechConfig?.setPropertyTo("2", byName: "SPEECH-DiarizationMinimumSpeakerCount")
-            speechConfig?.setPropertyTo("3", byName: "SPEECH-DiarizationMaximumSpeakerCount")
+            isConfigured = true
             
-            if debug {
-                print("Speech configuration created successfully with diarization enabled")
-            }
         } catch {
-            self.error = .configurationFailed
+            self.error = AzureError.configurationFailed
             if debug {
-                print("Failed to create speech configuration: \(error.localizedDescription)")
+                print("Error setting up speech config: \(error.localizedDescription)")
             }
         }
     }
     
     func startRecording() {
-        guard !isRecording else { return }
+        guard !isRecording else { 
+            if debug { print("Already recording, ignoring start request") }
+            return 
+        }
+        
+        // Ensure we're configured
+        if !isConfigured {
+            if debug { print("Setting up speech config") }
+            setupSpeechConfig()
+        }
+        
+        guard isConfigured else {
+            if debug { print("Speech config setup failed") }
+            self.error = AzureError.configurationFailed
+            return
+        }
         
         do {
+            if debug { print("Creating audio configuration") }
             // Create audio configuration for microphone
             audioConfig = SPXAudioConfiguration()
             
             guard let speechConfig = speechConfig, let audioConfig = audioConfig else {
-                self.error = .configurationFailed
+                self.error = AzureError.configurationFailed
                 return
             }
             
@@ -121,7 +112,7 @@ class AzureSpeechManager: ObservableObject {
                     }
                     
                     // Determine speaker based on speakerId
-                    var speaker: Speaker = .unknown
+                    var speaker: ConversationEntry.Speaker = .unknown
                     
                     if let speakerId = result.speakerId, !speakerId.isEmpty {
                         // Check if we've seen this speaker before
@@ -130,7 +121,7 @@ class AzureSpeechManager: ObservableObject {
                         } else {
                             // First time seeing this speaker, assign a role
                             // First speaker we encounter is the user, second is other
-                            let newSpeaker: Speaker = self.speakerMap.isEmpty ? .user : .other
+                            let newSpeaker: ConversationEntry.Speaker = self.speakerMap.isEmpty ? .user : .other
                             self.speakerMap[speakerId] = newSpeaker
                             speaker = newSpeaker
                             
@@ -142,9 +133,9 @@ class AzureSpeechManager: ObservableObject {
                     
                     DispatchQueue.main.async {
                         let entry = ConversationEntry(
+                            timestamp: Date(),
                             text: text,
-                            speaker: speaker,
-                            timestamp: Date()
+                            speaker: speaker
                         )
                         self.conversationLog.append(entry)
                         self.transcribedText = ""
@@ -161,7 +152,7 @@ class AzureSpeechManager: ObservableObject {
                 
                 DispatchQueue.main.async {
                     let errorDetails = event.errorDetails ?? "Unknown error"
-                    self.error = .recognitionFailed(errorDetails)
+                    self.error = AzureError.recognitionFailed(errorDetails)
                     self.stopRecording()
                 }
             }
@@ -184,7 +175,7 @@ class AzureSpeechManager: ObservableObject {
                     }
                     
                     DispatchQueue.main.async {
-                        self.error = .recognitionFailed(error?.localizedDescription ?? "Unknown error")
+                        self.error = AzureError.recognitionFailed(error?.localizedDescription ?? "Unknown error")
                         self.isRecording = false
                     }
                 }
@@ -194,7 +185,8 @@ class AzureSpeechManager: ObservableObject {
             isRecording = true
             
         } catch {
-            self.error = .recognitionFailed(error.localizedDescription)
+            if debug { print("Error in startRecording: \(error)") }
+            self.error = AzureError.recognitionFailed(error.localizedDescription)
             if debug {
                 print("Error starting recording: \(error.localizedDescription)")
             }
@@ -228,7 +220,7 @@ class AzureSpeechManager: ObservableObject {
             
             isRecording = false
         } catch {
-            self.error = .recognitionFailed(error.localizedDescription)
+            self.error = AzureError.recognitionFailed(error.localizedDescription)
             if debug {
                 print("Error stopping recording: \(error.localizedDescription)")
             }

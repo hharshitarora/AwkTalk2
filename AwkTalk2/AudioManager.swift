@@ -3,31 +3,6 @@ import AVFoundation
 import Speech
 import Combine
 
-enum AudioError: Error, Identifiable {
-    case permissionRequired
-    case recordingFailed(String)
-    case recognitionFailed(String)
-    
-    var id: String {
-        switch self {
-        case .permissionRequired: return "permissionRequired"
-        case .recordingFailed: return "recordingFailed"
-        case .recognitionFailed: return "recognitionFailed"
-        }
-    }
-    
-    var message: String {
-        switch self {
-        case .permissionRequired:
-            return "Microphone and speech recognition permissions are required"
-        case .recordingFailed(let message):
-            return "Recording failed: \(message)"
-        case .recognitionFailed(let message):
-            return "Speech recognition failed: \(message)"
-        }
-    }
-}
-
 class AudioManager: ObservableObject {
     @Published var isRecording = false
     @Published var isAuthorized = false
@@ -38,78 +13,156 @@ class AudioManager: ObservableObject {
     // Set isProfileCreated to true by default to skip the profile creation screen
     @Published private(set) var isProfileCreated = true
     
-    private var azureSpeechManager = AzureSpeechManager()
+    // Add conversation analyzer
+    @Published var conversationAnalysis: String = ""
+    @Published var conversationSuggestions: [String] = []
+    @Published var isAnalyzing: Bool = false
+    @Published var modelLoadingStatus: String = ""
+    
+    // Lazy initialize the conversation analyzer
+    private lazy var conversationAnalyzer = ConversationAnalyzer()
+    
+    // Lazy initialize the Azure speech manager
+    private lazy var azureSpeechManager = AzureSpeechManager()
+    
     private var cancellables = Set<AnyCancellable>()
     
+    // Track when we last analyzed the conversation
+    private var lastAnalyzedCount = 0
+    private let minEntriesForAnalysis = 3
+    private let analyzeEveryNEntries = 2
+    
+    @Published var conversationContext: String = ""
+    
     init() {
+        MemoryMetrics.shared.reportMemoryUsage(for: "AudioManager Init")
         checkPermissions()
+    }
+    
+    // Call this method when you're ready to set up speech recognition
+    func setupSpeechRecognition() {
+        MemoryMetrics.shared.reportMemoryUsage(for: "Before Speech Setup")
+        
+        // Add error observation
+        azureSpeechManager.$error
+            .receive(on: RunLoop.main)
+            .sink { [weak self] error in
+                if let error = error {
+                    print("Azure Speech Manager error: \(error.message)")
+                    self?.error = .recordingFailed(error.message)
+                }
+            }
+            .store(in: &cancellables)
         
         // Set up observers for Azure Speech Manager
         azureSpeechManager.$isRecording.assign(to: &$isRecording)
         azureSpeechManager.$transcribedText.assign(to: &$transcribedText)
-        azureSpeechManager.$conversationLog.assign(to: &$conversationLog)
         
-        // Handle Azure errors
-        azureSpeechManager.$error.sink { [weak self] azureError in
-            guard let self = self, let azureError = azureError else { return }
-            
-            switch azureError {
-            case .configurationFailed:
-                self.error = .recordingFailed("Azure configuration failed")
-            case .recognitionFailed(let message):
-                self.error = .recognitionFailed(message)
-            case .noSubscriptionKey:
-                self.error = .recordingFailed("Azure subscription key is missing")
+        // Set up observers for conversation analyzer
+        conversationAnalyzer.$isAnalyzing.assign(to: &$isAnalyzing)
+        conversationAnalyzer.$modelLoadingStatus.assign(to: &$modelLoadingStatus)
+        
+        // Observe conversation log changes
+        azureSpeechManager.$conversationLog
+            .receive(on: RunLoop.main)
+            .sink { [weak self] conversation in
+                guard let self = self else { return }
+                self.conversationLog = conversation
+                
+                // Check if we should analyze the conversation
+                self.checkAndAnalyzeConversation(conversation)
             }
-        }.store(in: &cancellables)
+            .store(in: &cancellables)
+        
+        // Observe analysis results
+        conversationAnalyzer.$analysis
+            .receive(on: RunLoop.main)
+            .sink { [weak self] analysis in
+                guard let self = self, !analysis.isEmpty else { return }
+                self.conversationAnalysis = analysis
+            }
+            .store(in: &cancellables)
+        
+        conversationAnalyzer.$suggestions
+            .receive(on: RunLoop.main)
+            .sink { [weak self] suggestions in
+                guard let self = self else { return }
+                self.conversationSuggestions = suggestions
+            }
+            .store(in: &cancellables)
+        
+        // Start loading the model in the background
+        Task {
+            await conversationAnalyzer.ensureModelLoaded()
+        }
+        
+        // After setup
+        MemoryMetrics.shared.reportMemoryUsage(for: "After Speech Setup")
     }
     
-    func checkPermissions() {
-        SFSpeechRecognizer.requestAuthorization { [weak self] status in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if status == .authorized {
-                    // Use the appropriate API based on iOS version
-                    if #available(iOS 17.0, *) {
-                        AVAudioApplication.requestRecordPermission { [weak self] granted in
-                            guard let self = self else { return }
-                            DispatchQueue.main.async {
-                                self.isAuthorized = granted
-                                if !granted {
-                                    self.error = .permissionRequired
-                                }
-                            }
-                        }
-                    } else {
-                        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
-                            guard let self = self else { return }
-                            DispatchQueue.main.async {
-                                self.isAuthorized = granted
-                                if !granted {
-                                    self.error = .permissionRequired
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    self.isAuthorized = false
-                    self.error = .permissionRequired
-                }
+    private func checkAndAnalyzeConversation(_ conversation: [ConversationEntry]) {
+        MemoryMetrics.shared.reportMemoryUsage(for: "Before Conversation Analysis")
+        
+        // Only analyze if:
+        // 1. We have at least the minimum number of entries
+        // 2. We have new entries since the last analysis
+        // 3. The number of new entries is at least analyzeEveryNEntries
+        // 4. We're not currently analyzing
+        
+        if conversation.count >= minEntriesForAnalysis && 
+           conversation.count > lastAnalyzedCount &&
+           (conversation.count - lastAnalyzedCount) >= analyzeEveryNEntries &&
+           !isAnalyzing {
+            
+            // Update the last analyzed count
+            lastAnalyzedCount = conversation.count
+            
+            // Create a limited context by taking only the last 10 entries
+            // This prevents memory issues with very long conversations
+            let limitedConversation = conversation.suffix(10)
+            
+            // Analyze the conversation with context
+            Task {
+                await conversationAnalyzer.analyzeConversation(Array(limitedConversation), context: conversationContext)
+                MemoryMetrics.shared.reportMemoryUsage(for: "After Conversation Analysis")
             }
         }
     }
     
-    func requestPermission() {
-        checkPermissions()
+    func checkPermissions() {
+        // Check microphone permissions directly
+        switch AVAudioSession.sharedInstance().recordPermission {
+        case .granted:
+            DispatchQueue.main.async {
+                self.isAuthorized = true
+            }
+        case .denied:
+            DispatchQueue.main.async {
+                self.isAuthorized = false
+                self.error = .permissionDenied
+            }
+        case .undetermined:
+            AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+                DispatchQueue.main.async {
+                    self?.isAuthorized = granted
+                    if !granted {
+                        self?.error = .permissionDenied
+                    }
+                }
+            }
+        @unknown default:
+            DispatchQueue.main.async {
+                self.isAuthorized = false
+                self.error = .permissionDenied
+            }
+        }
     }
     
     func startRecording() {
-        guard isAuthorized && !isRecording else { return }
         azureSpeechManager.startRecording()
     }
     
     func stopRecording() {
-        guard isRecording else { return }
         azureSpeechManager.stopRecording()
     }
     
@@ -119,17 +172,38 @@ class AudioManager: ObservableObject {
     }
     
     func clearConversation() {
+        MemoryMetrics.shared.reportMemoryUsage(for: "Before Clear Conversation")
+        
+        // Stop any ongoing analysis
+        isAnalyzing = false
+        
+        // Reset the last analyzed count
+        lastAnalyzedCount = 0
+        
+        // Clear conversation data
         conversationLog = []
+        conversationAnalysis = ""
+        conversationSuggestions = []
+        
+        // Clear transcribed text
         transcribedText = ""
         
-        // Also clear the Azure speech manager's conversation log
+        // Clear Azure Speech Manager conversation log
         azureSpeechManager.clearConversation()
+        
+        MemoryMetrics.shared.reportMemoryUsage(for: "After Clear Conversation")
+    }
+    
+    func setConversationContext(_ context: String) {
+        self.conversationContext = context
+        
+        // Reset conversation when setting new context
+        clearConversation()
+    }
+    
+    func preloadModel() {
+        Task {
+            await conversationAnalyzer.ensureModelLoaded()
+        }
     }
 }
-
-struct ConversationEntry: Identifiable {
-    let id = UUID()
-    let text: String
-    let speaker: Speaker
-    let timestamp: Date
-} 

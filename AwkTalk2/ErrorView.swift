@@ -1,45 +1,80 @@
 import SwiftUI
 
 struct ErrorView: View {
-    let error: AudioError
-    @State private var isVisible = false
+    let error: Error
+    let dismissAction: () -> Void
     
     var body: some View {
-        VStack {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.yellow)
-                
-                Text(error.localizedDescription)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(uiColor: .systemGray6))
-                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-            )
-            .padding(.horizontal)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.top, 60)
-        .opacity(isVisible ? 1 : 0)
-        .offset(y: isVisible ? 0 : -20)
-        .animation(.spring(response: 0.3), value: isVisible)
-        .onAppear {
-            isVisible = true
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
             
-            // Auto-dismiss after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                isVisible = false
+            Text(errorTitle)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            
+            Text(errorMessage)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+            
+            Button(action: dismissAction) {
+                Text("Dismiss")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
             }
+            .padding(.top, 10)
+        }
+        .padding(30)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(radius: 10)
+        .padding(20)
+    }
+    
+    private var errorTitle: String {
+        if let audioError = error as? AudioError {
+            switch audioError {
+            case .permissionDenied:
+                return "Microphone Access Required"
+            case .recordingFailed:
+                return "Recording Failed"
+            case .transcriptionFailed:
+                return "Transcription Failed"
+            }
+        } else if let azureError = error as? AzureError {
+            switch azureError {
+            case .configurationFailed:
+                return "Configuration Failed"
+            case .recognitionFailed:
+                return "Recognition Failed"
+            case .noSubscriptionKey:
+                return "Subscription Key Missing"
+            }
+        } else {
+            return "Error Occurred"
+        }
+    }
+    
+    private var errorMessage: String {
+        if let audioError = error as? AudioError {
+            return audioError.message
+        } else if let azureError = error as? AzureError {
+            return azureError.message
+        } else {
+            return error.localizedDescription
         }
     }
 }
 
 #Preview {
-    ErrorView(error: .recordingFailed("Microphone access denied"))
+    ErrorView(
+        error: AudioError.recordingFailed("Microphone access denied"),
+        dismissAction: {}
+    )
 } 
