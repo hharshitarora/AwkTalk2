@@ -9,9 +9,26 @@ class AzureSpeechManager: ObservableObject {
     @Published var conversationLog: [ConversationEntry] = []
     @Published var error: AzureError?
     
-    // Azure Speech Service credentials - use directly without encryption
-    private let subscriptionKey = "3vGIugLP8MhpI2LCewNbHk6xqulW1YH60vh4MGDMC1qHgMqZKNo5JQQJ99BCAC1i4TkXJ3w3AAAYACOGf3CI" // Replace with your actual key
-    private let region = "centralus"
+    // NEVER commit actual keys to public repositories
+    private let subscriptionKey: String = {
+        // Load from environment variable or configuration file
+        guard let key = ProcessInfo.processInfo.environment["AZURE_SPEECH_KEY"] ?? 
+              Bundle.main.infoDictionary?["AzureSpeechKey"] as? String else {
+            print("⚠️ Warning: Azure Speech Key not found in environment or configuration")
+            return ""
+        }
+        return key
+    }()
+    
+    private let region: String = {
+        // Load from environment variable or configuration file
+        guard let region = ProcessInfo.processInfo.environment["AZURE_SPEECH_REGION"] ?? 
+              Bundle.main.infoDictionary?["AzureSpeechRegion"] as? String else {
+            print("⚠️ Warning: Azure Speech Region not found in environment or configuration")
+            return "centralus"
+        }
+        return region
+    }()
     
     // Speech recognition
     private var speechConfig: SPXSpeechConfiguration?
